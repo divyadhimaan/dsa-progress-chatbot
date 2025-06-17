@@ -38,6 +38,18 @@ def get_day_plan(day):
             response += f"- Problem {i}: {prob}\n"
     return response
 
+def get_all_completed_topics():
+    df = load_schedule()
+    completed_df = load_completed_days()
+    
+    completed_topics = set()
+    for _, row in df.iterrows():
+        day_str = str(int(row["Day"]))
+        if day_str in completed_df:
+            completed_topics.add(row["Focus"])
+    
+    return "\n".join(f"- {topic}" for topic in completed_topics)
+
 def mark_day_completed(day):
     completed_df = load_completed_days()
     completed_df.add(str(day))

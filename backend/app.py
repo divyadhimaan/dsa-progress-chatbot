@@ -11,19 +11,26 @@ def home():
 
 @app.route("/api/message", methods=["POST"])
 def chat():
-    print("💬 Received request")
-    data = request.get_json()
-    print("📥 Data:", data)
-    user_input = data.get("message", "")
-    if not user_input:
-        return jsonify({"reply": "⚠️ Please enter a message."}), 400
+
+    print("💬 Received /api/message POST")
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
 
     try:
-        response = dsa_agent(user_input)
+        data = request.get_json()
+        print("📥 Received:", data)
+
+        message = data.get("message", "")
+        if not message:
+            return jsonify({"reply": "⚠️ Message is missing."}), 400
+
+        response = dsa_agent(message)
         return jsonify({"reply": response})
+
     except Exception as e:
-        print("Error in dsa_agent:", str(e))
-        return jsonify({"reply": "❌ Something went wrong on the server."}), 500
+        print("❌ Exception occurred:")
+        traceback.print_exc()  # Logs full error trace
+        return jsonify({"reply": "❌ Server error"}), 500
 
 
 if __name__ == "__main__":

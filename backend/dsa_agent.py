@@ -4,7 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 
-from dsa_schedule import get_day_plan, mark_day_completed, get_next_day_plan, load_completed_days
+from dsa_schedule import get_day_plan, mark_day_completed, get_next_day_plan, load_completed_days, get_all_completed_topics, clear_progress
 
 
 load_dotenv()
@@ -51,44 +51,60 @@ def interpret_input(user_input):
 
     if "what" in lower and "plan" in lower:
         return get_next_day_plan()
+    
+    if "completed" in lower or "topics" in lower:
+        return get_all_completed_topics()
+    
+    if "clear" in lower:
+        clear_progress()
+        return "✅ All progress cleared."
+        
 
     return None  # fallback to OpenAI
 
 def dsa_agent(user_input):
     # System prompt = agent persona
-    structured_response = interpret_input(user_input)
-    if structured_response:
-        return structured_response
-    
-    return "This is a mock response"
+    try:
+        structured_response = interpret_input(user_input)
+        if structured_response:
+            return structured_response
+    except Exception as e:
+        print("❌ interpret_input failed:", e)
+        
+    reply = f"🧪 Mock response for: '{user_input}'"
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You're Divya's DSA preparation assistant. "
-                "Track progress, suggest topics, answer interview prep questions, and stay positive and motivating."
-            )
-        },
-        {
-            "role": "user",
-            "content": user_input
-        }
-    ]
+    # try:
+    #     messages = [
+    #         {
+    #             "role": "system",
+    #             "content": (
+    #                 "You're Divya's DSA preparation assistant. "
+    #                 "Track progress, suggest topics, answer interview prep questions, and stay positive and motivating."
+    #             )
+    #         },
+    #         {
+    #             "role": "user",
+    #             "content": user_input
+    #         }
+    #     ]
 
+    #     # Call OpenAI
+    #     response = client.chat.completions.create(
+    #         model="gpt-3.5-turbo",
+    #         messages=messages
+    #     )
 
-    # Call OpenAI
-    response = client.chat.completions.create(model="gpt-3.5-turbo",
-    messages=messages)
+    #     reply = response.choices[0].message.content
 
-    reply = response.choices[0].message.content
+    #     # Save to memory if it's a progress log
+    #     if any(word in user_input.lower() for word in ["solved", "did", "completed", "finished"]):
+    #         memory["logs"].append({
+    #             "timestamp": str(datetime.now()),
+    #             "entry": user_input
+    #         })
+    #         save_memory()
 
-    # Save to memory if it's a progress log
-    if any(word in user_input.lower() for word in ["solved", "did", "completed", "finished"]):
-        memory["logs"].append({
-            "timestamp": str(datetime.now()),
-            "entry": user_input
-        })
-        save_memory()
+    # except Exception as e:
+    #     print("❌ OpenAI call failed, returning mock response:", str(e))
 
     return reply
