@@ -7,6 +7,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { UserCircle, MessageSquarePlus } from 'lucide-react';
+import { ComponentPropsWithoutRef } from "react";
+
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
@@ -161,14 +163,14 @@ export default function Home() {
               >
                 <ReactMarkdown
                   components={{
-                    a: ({ node, ...props }) => (
+                    a: ({ node: _node, ...props }: ComponentPropsWithoutRef<"a"> & { node?: any }) => (
                       <a
                         {...props}
                         className="text-blue-400 underline hover:text-blue-300"
                         target="_blank"
                         rel="noopener noreferrer"
                       />
-                    )
+                    ),
                   }}
                 >
                   {message.text}
