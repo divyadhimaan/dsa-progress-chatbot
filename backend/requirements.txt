@@ -2,3 +2,8 @@ flask
 flask-cors
 openai
 pandas
+dotenv
+openai
+datetime
+json
+os
