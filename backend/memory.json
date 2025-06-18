@@ -1,3 +1,24 @@
 {
-  "logs": []
+  "logs": [
+    {
+      "timestamp": "2025-06-18T19:07:29.993297",
+      "user_input": "What should I revise next?",
+      "response": "\ud83d\udcc5 Day 1 \u2014 Focus: Arrays & Prefix Sum\n- Problem 1: [Subarray Sum Equals K](https://leetcode.com/problems/subarray-sum-equals-k/)\n- Problem 2: [Maximum Product Subarray](https://leetcode.com/problems/maximum-product-subarray/)\n- Problem 3: [Minimum Size Subarray Sum](https://leetcode.com/problems/minimum-size-subarray-sum/)\n"
+    },
+    {
+      "timestamp": "2025-06-18T19:07:33.947566",
+      "user_input": "hello",
+      "response": "Hello! I'm D-bot, your DSA companion! It's great to meet you! How can I help you today? Do you want to track your progress, suggest topics, or practice interview prep questions? Let me know, and I'll be happy to assist you!"
+    },
+    {
+      "timestamp": "2025-06-18T19:07:39.004819",
+      "user_input": "am i doing good?",
+      "response": "You're just starting out! That's completely okay! You've completed 0 topics so far, but that means you have a clean slate to work with. I'm excited to help you track your progress and suggest topics to get you started. Remember, every journey begins with a single step, and I'm here to support you every step of the way. Let's get started and make some progress!"
+    },
+    {
+      "timestamp": "2025-06-18T19:07:45.988084",
+      "user_input": "mark all compleyted",
+      "response": "You've completed 0 topics:"
+    }
+  ]
 }
