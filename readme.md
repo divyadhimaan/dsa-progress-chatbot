@@ -41,3 +41,7 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 └────────────────────┘ -->
 
 
+
+<!-- ## Deployments
+backend - render (https://dsa-progress-chatbot.onrender.com)
+frontend - vercel (https://d-bot-jet.vercel.app/) -->
