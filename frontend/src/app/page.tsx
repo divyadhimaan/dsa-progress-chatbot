@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Send, Paperclip } from 'lucide-react';
+import { Send } from 'lucide-react';
 import axios from 'axios';
 import Image from 'next/image';
 import Link from 'next/link';
