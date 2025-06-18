@@ -41,14 +41,33 @@ def get_day_plan(day):
 def get_all_completed_topics():
     df = load_schedule()
     completed_df = load_completed_days()
-    
+
     completed_topics = set()
+    debug_log = []
+
     for _, row in df.iterrows():
         day_str = str(int(row["Day"]))
-        if day_str in completed_df:
-            completed_topics.add(row["Focus"])
-    
-    return "\n".join(f"- {topic}" for topic in completed_topics)
+        topic = str(row["Focus"]).strip() if not pd.isna(row["Focus"]) else ""
+
+        if day_str in completed_df and topic and topic.lower() != "(missing topic)":
+            completed_topics.add(topic)
+            debug_log.append(f"✔️ Day {day_str} — {topic}")
+        else:
+            debug_log.append(f"❌ Skipped Day {day_str} — Topic: {topic}")
+
+    # Uncomment to debug
+    # print("\n".join(debug_log))
+
+    if not completed_topics:
+        return "❗ You haven't completed any valid topics yet. Let’s start solving!", []
+
+    sorted_topics = sorted(completed_topics)
+    summary = (
+        f"You've completed {len(sorted_topics)} topics so far. Keep going! 🚀\n\n"
+        "Here are your completed topics:\n\n"
+        + "\n".join(f"- {topic}" for topic in sorted_topics)
+    )
+    return summary, sorted_topics
 
 def mark_day_completed(day):
     completed_df = load_completed_days()
@@ -60,7 +79,7 @@ def mark_day_completed(day):
 def clear_progress():
     if os.path.exists(PROGRESS_FILE):
         os.remove(PROGRESS_FILE)
-    print("✅ Progress cleared.")
+    print("Progress has been cleared. Start again soon.")
     
 def get_next_day_plan():
     df = load_schedule()

@@ -11,6 +11,14 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 - Dynamic updates with typing placeholders ("...")
 - Mobile-responsive layout
 
+<!-- ## AI Models
+| Model Name        | Description                      |
+| ----------------- | -------------------------------- |
+| `llama3-8b-8192`  | Meta LLaMA 3 (lightweight, fast) |
+| `llama3-70b-8192` | Meta LLaMA 3 (very strong)       |
+| `gemma-7b-it`     | Google Gemma (chat tuned)        |
+ -->
+
 <!-- ## Flow
 
 ┌────────────────────┐

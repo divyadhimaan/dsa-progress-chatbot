@@ -3,12 +3,12 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+import requests
 
 from dsa_schedule import get_day_plan, mark_day_completed, get_next_day_plan, load_completed_days, get_all_completed_topics, clear_progress
 
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 MEMORY_FILE = "memory.json"
@@ -21,7 +21,10 @@ except:
 def save_memory():
     with open(MEMORY_FILE, "w") as f:
         json.dump(memory, f, indent=2)
-
+        
+def summarize_progress():
+    summary, topics = get_all_completed_topics()
+    return f"You've completed {len(topics)} topics:\n" + "\n".join(f"{i+1}. {topic}" for i, topic in enumerate(topics))
 
 def interpret_input(user_input):
     lower = user_input.lower()
@@ -52,8 +55,9 @@ def interpret_input(user_input):
     if "what" in lower and "plan" in lower:
         return get_next_day_plan()
     
-    if "completed" in lower or "topics" in lower:
-        return get_all_completed_topics()
+    if "completed" in lower or "topics" in lower or "done" in lower:
+        summary, _ = get_all_completed_topics()
+        return summary
     
     if "clear" in lower:
         clear_progress()
@@ -72,39 +76,57 @@ def dsa_agent(user_input):
         print("❌ interpret_input failed:", e)
         
     reply = f"🧪 Mock response for: '{user_input}'"
+    
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")  
+    if not GROQ_API_KEY:
+        return "❌ Missing GROQ_API_KEY in environment variables."
+    
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You're Divya's DSA bot aka D-bot "
+                "Track progress, suggest topics, answer interview prep questions, and stay positive and motivating."
+                "Only rely on the provided list for completed topics. Do not make up extra content.\n"
+                "When asked for completion progress, check completed topics\n"
+                f"Current completed topics:\n{summarize_progress()}"
+            )
+        },
+        {
+            "role": "user",
+            "content": user_input
+        }
+    ]
 
-    # try:
-    #     messages = [
-    #         {
-    #             "role": "system",
-    #             "content": (
-    #                 "You're Divya's DSA preparation assistant. "
-    #                 "Track progress, suggest topics, answer interview prep questions, and stay positive and motivating."
-    #             )
-    #         },
-    #         {
-    #             "role": "user",
-    #             "content": user_input
-    #         }
-    #     ]
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "llama3-8b-8192",  # Or llama3-70b-8192 for more reasoning
+        "messages": messages,
+        "temperature": 0.7
+    }
 
-    #     # Call OpenAI
-    #     response = client.chat.completions.create(
-    #         model="gpt-3.5-turbo",
-    #         messages=messages
-    #     )
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+        response.raise_for_status()
+        reply = response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.HTTPError as e:
+        print("❌ HTTP Error:", e.response.status_code, e.response.text)
+        reply = "❌ Groq API call failed: HTTP error."
+    except Exception as e:
+        print("❌ Groq call failed:", str(e))
+        reply = "❌ Groq API call failed."
 
-    #     reply = response.choices[0].message.content
-
-    #     # Save to memory if it's a progress log
-    #     if any(word in user_input.lower() for word in ["solved", "did", "completed", "finished"]):
-    #         memory["logs"].append({
-    #             "timestamp": str(datetime.now()),
-    #             "entry": user_input
-    #         })
-    #         save_memory()
-
-    # except Exception as e:
-    #     print("❌ OpenAI call failed, returning mock response:", str(e))
+    
 
     return reply
+
+

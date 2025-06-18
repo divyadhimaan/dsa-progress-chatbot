@@ -1,6 +1,5 @@
 flask
 flask-cors
-openai
 pandas
 python-dotenv
-openai
+requests

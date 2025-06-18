@@ -7,11 +7,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { UserCircle } from 'lucide-react';
 
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
 
 const suggestions = [
   "What is the plan for today?",
-  "Mark today completed"
+  "What should I revise next?",
+  "How much have I done?",
+  
 ];
 
 export default function Home() {
@@ -32,7 +35,7 @@ export default function Home() {
     setInput('');
 
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/message`, {
+      const res = await axios.post(`${baseUrl}/api/message`, {
         message,
       });
       console.log(res.data);
