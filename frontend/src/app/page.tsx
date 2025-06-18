@@ -32,7 +32,7 @@ export default function Home() {
     setInput('');
 
     try {
-      const res = await axios.post('http://localhost:5001/api/message', {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/message`, {
         message,
       });
       console.log(res.data);

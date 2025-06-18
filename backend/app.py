@@ -9,6 +9,10 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 def home():
     return "DSA Chatbot Backend is Running."
 
+@app.route("/healthy", methods=["GET"])
+def healthy():
+    return "OK", 200
+
 @app.route("/api/message", methods=["POST"])
 def chat():
 
