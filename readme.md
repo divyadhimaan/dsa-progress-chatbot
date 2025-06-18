@@ -10,6 +10,9 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 - Stylish UI with left/right alignment for bot/user
 - Dynamic updates with typing placeholders ("...")
 - Mobile-responsive layout
+- Chats stored in memory
+- Responses with clickable leetcode links
+- Using model 
 
 <!-- ## AI Models
 | Model Name        | Description                      |
@@ -36,3 +39,5 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 │  - DSA Sheet DB    │ ← Local / API
 │  - Reminder API    │ ← Optional
 └────────────────────┘ -->
+
+

@@ -1,12 +1,18 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
 from dsa_agent import dsa_agent
+import json
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": [
     "http://localhost:3000",           # for local dev
     "https://d-bot-jet.vercel.app"     # for production
 ]}})
+MEMORY_FILE = "memory.json"
 
 @app.route("/")
 def home():
@@ -28,10 +34,11 @@ def chat():
         print("📥 Received:", data)
 
         message = data.get("message", "")
+        model = data.get("model", "llama3-8b-8192")
         if not message:
             return jsonify({"reply": "⚠️ Message is missing."}), 400
 
-        response = dsa_agent(message)
+        response = dsa_agent(message, model)
         return jsonify({"reply": response})
 
     except Exception as e:
@@ -39,6 +46,22 @@ def chat():
         traceback.print_exc()  # Logs full error trace
         return jsonify({"reply": "❌ Server error"}), 500
 
+@app.route("/api/memory", methods=["GET"])
+def get_memory():
+    try:
+        with open(MEMORY_FILE, "r") as f:
+            memory = json.load(f)
+            return jsonify(memory.get("logs", []))
+    except:
+        return jsonify([])
+    
+@app.route("/api/clear", methods=["POST"])
+def clear_memory():
+    global memory
+    memory = {"logs": []}
+    with open("memory.json", "w") as f:
+        json.dump(memory, f, indent=2)
+    return {"status": "cleared"}
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=os.getenv("BACKEND_PORT")  , debug=True)

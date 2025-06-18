@@ -75,6 +75,13 @@ def mark_day_completed(day):
     with open(PROGRESS_FILE, "w") as f:
         json.dump(list(completed_df), f)
         
+def unmark_day_completed(day):
+    completed_df = load_completed_days()
+    day_str = str(day)
+    if day_str in completed_df:
+        completed_df.remove(day_str)
+        with open(PROGRESS_FILE, "w") as f:
+            json.dump(list(completed_df), f)
     
 def clear_progress():
     if os.path.exists(PROGRESS_FILE):
