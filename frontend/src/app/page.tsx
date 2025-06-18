@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 import axios from 'axios';
+import Image from 'next/image';
+import Link from 'next/link';
+import { UserCircle } from 'lucide-react';
+
+
 
 const suggestions = [
   "What is the plan for today?",
@@ -47,6 +52,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col justify-between">
       {/* <main className="max-w-3xl mx-auto flex-1 flex flex-col items-center justify-center px-4"> */}
+      <div className="sticky top-0 z-10 w-full px-4 py-3 bg-black/50 backdrop-blur-lg flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Link href="/">
+            <Image
+              src="/logo-light.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
+          </Link>
+          <span className="text-white font-semibold text-lg">D-Bot</span>
+        </div>
+        <UserCircle className="text-white w-8 h-8 cursor-pointer" />
+      </div>
       <main className="max-w-3xl mx-auto flex-1 flex items-center justify-center px-4">
 
       {chat.length === 0 && (
@@ -75,7 +95,7 @@ export default function Home() {
               className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`p-3 rounded-2xl max-w-[75%] whitespace-pre-line ${
+                className={`p-3 rounded-2xl max-w-[75%] max-w-[75%] break-words whitespace-pre-wrap ${
                   message.sender === "user"
                     ? "bg-blue-600 text-white rounded-br-none"
                     : "bg-zinc-800 text-white rounded-bl-none"
