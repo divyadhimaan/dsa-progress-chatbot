@@ -14,6 +14,9 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 - Responses with clickable leetcode links
 - Using model 
 
+## UI Sample
+![Alt text](image.png)
+
 <!-- ## AI Models
 | Model Name        | Description                      |
 | ----------------- | -------------------------------- |
