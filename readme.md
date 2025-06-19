@@ -13,9 +13,11 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 - Chats stored in memory
 - Responses with clickable leetcode links
 - Using model 
+  - Meta LLaMA 3 (llama3-8b-8192): lightweight, fast
+  - Meta LLaMA 3 (llama3-70b-8192): very strong
 
 ## UI Sample
-![Alt text](image.png)
+![Alt text](./images/ui-demo.png)
 
 <!-- ## AI Models
 | Model Name        | Description                      |
