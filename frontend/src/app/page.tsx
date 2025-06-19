@@ -14,7 +14,6 @@ import { HTMLAttributes } from "react";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
-
 const suggestions = [
   "What is the plan for today?",
   "What should I revise next?",
@@ -32,6 +31,7 @@ export default function Home() {
   const [chat, setChat] = useState<{ sender: "user" | "bot"; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(models[0].value);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
 
   const handleNewChat = async () => {
@@ -40,8 +40,13 @@ export default function Home() {
 
     setChat([]);
     setInput('');
+
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     try {
-      await axios.post(`${baseUrl}/api/clear`);
+      await axios.post(`${baseUrl}/api/clear?session_id=${sessionId}`);
       console.log("✅ Memory cleared");
     } catch (err) {
       console.error("❌ Failed to clear memory:", err);
@@ -50,9 +55,24 @@ export default function Home() {
 
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      let storedSession = sessionStorage.getItem("session_id");
+      if (!storedSession) {
+        storedSession = crypto.randomUUID();
+        sessionStorage.setItem("session_id", storedSession);
+      }
+      setSessionId(storedSession);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+  
     const loadMemory = async () => {
       try {
-        const res = await axios.get(`${baseUrl}/api/memory`);
+        const res = await axios.get(`${baseUrl}/api/memory`, {
+          params: { session_id: sessionId }
+        });
         const restoredChat = res.data.map((log: any) => ([
           { sender: "user", text: log.user_input },
           { sender: "bot", text: log.response }
@@ -62,8 +82,9 @@ export default function Home() {
         console.error("❌ Failed to load memory:", err);
       }
     };
+  
     loadMemory();
-  }, []);
+  }, [sessionId]);
 
   const sendMessage = async (msg?: string) => {
     const message = msg || input.trim();
@@ -81,6 +102,7 @@ export default function Home() {
     try {
       const res = await axios.post(`${baseUrl}/api/message`, {
         message,
+        session_id: sessionId,
         model: selectedModel
       });
       console.log(res.data);

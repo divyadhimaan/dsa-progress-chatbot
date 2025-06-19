@@ -3,3 +3,6 @@ flask-cors
 pandas
 python-dotenv
 requests
+pymongo
+dnspython
+certifi

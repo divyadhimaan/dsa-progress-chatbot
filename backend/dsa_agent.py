@@ -4,23 +4,51 @@ from dotenv import load_dotenv
 import os
 import requests
 import re
+from pymongo import MongoClient
+import certifi
+
 
 from dsa_schedule import *
 
 
 load_dotenv()
 
+# Initialize MongoDB client for persistent memory
+MONGO_URI = os.getenv("MONGO_URI")
+mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
+db = mongo_client["dsa_memory"]
+logs_collection = db["logs"]
 
-MEMORY_FILE = "memory.json"
-try:
-    with open(MEMORY_FILE, "r") as f:
-        memory = json.load(f)
-except:
-    memory = {"logs": []}
+session_memory = {}
 
-def save_memory():
-    with open(MEMORY_FILE, "w") as f:
-        json.dump(memory, f, indent=2)
+def get_session_logs(session_id):
+    return session_memory.get(session_id, {}).get("logs", [])
+
+def append_session_log(session_id, user_input, response):
+    if session_id not in session_memory:
+        session_memory[session_id] = {"logs": []}
+    session_memory[session_id]["logs"].append({
+        "timestamp": datetime.now().isoformat(),
+        "user_input": user_input,
+        "response": response
+    })
+    
+def get_session_history(session_id):
+    logs = get_session_logs(session_id)
+    return "\n".join(f"{log['timestamp']} - {log['user_input']} → {log['response']}" for log in logs)
+
+def persist_session_to_mongo(session_id):
+    logs = get_session_logs(session_id)
+    if not logs:
+        return
+    
+    for log in logs:
+        logs_collection.insert_one({
+            "session_id": session_id,
+            "timestamp": log["timestamp"],
+            "user_input": log["user_input"],
+            "response": log["response"]
+        })
         
 def extract_day(text):
     match = re.search(r"day (\d+)", text.lower())
@@ -85,17 +113,15 @@ def interpret_input(user_input):
     # 8. Fallback
     return None
 
-def dsa_agent(user_input, model="llama3-8b-8192"):
+def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
     # System prompt = agent persona
     try:
         structured_response = interpret_input(user_input)
         if structured_response:
-            memory["logs"].append({
-                "timestamp": datetime.now().isoformat(),
-                "user_input": user_input,
-                "response": structured_response
-            })
-            save_memory()
+
+            if session_id:
+                append_session_log(session_id, user_input, structured_response)
+                
             return structured_response
     except Exception as e:
         print("❌ interpret_input failed:", e)
@@ -150,12 +176,9 @@ def dsa_agent(user_input, model="llama3-8b-8192"):
         print("❌ Groq call failed:", str(e))
         reply = "❌ Groq API call failed."
 
-    memory["logs"].append({
-        "timestamp": datetime.now().isoformat(),
-        "user_input": user_input,
-        "response": reply
-    })
-    save_memory()
+
+    if session_id:
+        append_session_log(session_id, user_input, reply)
 
     return reply
 

@@ -10,7 +10,8 @@ A simple chat interface built with React (Next.js) and Flask/Node.js backend, de
 - Stylish UI with left/right alignment for bot/user
 - Dynamic updates with typing placeholders ("...")
 - Mobile-responsive layout
-- Chats stored in memory
+- Session based temporary storage
+- Persistent memory saved to MongoDb
 - Responses with clickable leetcode links
 - Using model 
   - Meta LLaMA 3 (llama3-8b-8192): lightweight, fast
