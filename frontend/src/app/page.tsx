@@ -7,9 +7,9 @@ import { Send } from 'lucide-react';
 import axios from 'axios';
 import Image from 'next/image';
 import Link from 'next/link';
-// import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from 'react-markdown';
 import { UserCircle, MessageSquarePlus } from 'lucide-react';
-// import { HTMLAttributes } from "react";
+import { HTMLAttributes } from "react";
 
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
@@ -163,7 +163,7 @@ export default function Home() {
                   : "bg-zinc-800 text-white rounded-bl-none"
                   }`}
               >
-                {/* <ReactMarkdown
+                <ReactMarkdown
                   components={{
                     a: (props: HTMLAttributes<HTMLAnchorElement>) => (
                       <a
@@ -174,9 +174,9 @@ export default function Home() {
                       />
                     ),
                   }}
-                > */}
+                >
                   {message.text}
-                {/* </ReactMarkdown> */}
+                </ReactMarkdown>
               </div>
             </div>
           ))}
