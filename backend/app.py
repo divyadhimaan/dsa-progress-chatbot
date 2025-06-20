@@ -66,6 +66,7 @@ def clear_memory():
     if not session_id:
         return jsonify({"status": "error", "message": "Missing session_id"}), 400
 
+    print(f"Clearing memory for session: {session_id} and adding to persistant storage")
     persist_session_to_mongo(session_id)
 
     if session_id in session_memory:

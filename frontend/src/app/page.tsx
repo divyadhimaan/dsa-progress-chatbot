@@ -44,6 +44,10 @@ export default function Home() {
     setChat([]);
     setInput('');
 
+    const newSessionId = crypto.randomUUID();
+    sessionStorage.setItem("session_id", newSessionId);
+    setSessionId(newSessionId);
+
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -59,12 +63,10 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      let storedSession = sessionStorage.getItem("session_id");
-      if (!storedSession) {
-        storedSession = crypto.randomUUID();
-        sessionStorage.setItem("session_id", storedSession);
+      const storedSession = sessionStorage.getItem("session_id");
+      if (storedSession) {
+        setSessionId(storedSession);
       }
-      setSessionId(storedSession);
     }
   }, []);
 

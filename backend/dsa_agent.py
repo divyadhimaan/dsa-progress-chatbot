@@ -42,6 +42,8 @@ def persist_session_to_mongo(session_id):
     if not logs:
         return
     
+    print(f"Persisting {len(logs)} logs for session {session_id} to MongoDB")
+    
     for log in logs:
         logs_collection.insert_one({
             "session_id": session_id,
