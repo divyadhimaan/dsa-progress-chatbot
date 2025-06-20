@@ -133,7 +133,7 @@ export default function Home() {
               className="object-contain"
             />
           </Link>
-          <span className="text-white font-semibold text-lg">D-Bot</span>
+          {/* <span className="text-white font-semibold text-lg">bot</span> */}
         </div>
         <select
           value={selectedModel}
@@ -180,7 +180,7 @@ export default function Home() {
               className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`p-3 rounded-2xl max-w-[75%] min-w-[160px] break-words whitespace-pre-wrap ${message.sender === "user"
+                className={`p-3 rounded-2xl w-fit min-w-[250px] max-w-[75%] break-words whitespace-pre-wrap bg-blue-600 text-white rounded-br-none ${message.sender === "user"
                   ? "bg-blue-600 text-white rounded-br-none"
                   : "bg-zinc-800 text-white rounded-bl-none"
                   }`}
