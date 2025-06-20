@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSnackbar } from 'notistack';
 import { Send } from 'lucide-react';
 import axios from 'axios';
 import Image from 'next/image';
@@ -32,6 +33,8 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(models[0].value);
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const { enqueueSnackbar } = useSnackbar();
 
 
   const handleNewChat = async () => {
@@ -105,17 +108,27 @@ export default function Home() {
         session_id: sessionId,
         model: selectedModel
       });
-      console.log(res.data);
-      const reply = res.data.reply || "❌ No response";
+      
+
+      const data = res.data.reply;
+
+      const reply = data.message || "❌ No response";
+      if (data.status === "error" && data.snackbar) {
+        enqueueSnackbar(data.snackbar, { variant: "error" });
+      }
+
       setChat(prev => [
         ...prev.slice(0, -1),
         { sender: "bot", text: reply }
       ]);
-    } catch {
+    } catch (err) {
+      console.error("Server error:", err);
+      // Replace the "..." placeholder with error text
       setChat(prev => [
         ...prev.slice(0, -1),
         { sender: "bot", text: "❌ Server error" }
       ]);
+      enqueueSnackbar("Something went wrong while sending your message.", { variant: "error" });
     }
   };
 

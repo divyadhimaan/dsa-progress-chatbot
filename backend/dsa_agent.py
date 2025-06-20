@@ -122,15 +122,33 @@ def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
             if session_id:
                 append_session_log(session_id, user_input, structured_response)
                 
-            return structured_response
+            return {
+                "status": "ok",
+                "message": structured_response
+            }
     except Exception as e:
         print("❌ interpret_input failed:", e)
+        error_message = f"⚠️ Sorry! Something went wrong understanding your request.\n{str(e)}"
+        if session_id:
+            append_session_log(session_id, user_input, error_message)
+        return {
+            "status": "error",
+            "message": error_message,
+            "snackbar": "Some messages might be missing due to an internal error."
+        }
         
     reply = f"🧪 Mock response for: '{user_input}'"
     
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")  
     if not GROQ_API_KEY:
-        return "❌ Missing GROQ_API_KEY in environment variables."
+        error_message = "❌ Missing GROQ_API_KEY in environment variables."
+        if session_id:
+            append_session_log(session_id, user_input, error_message)
+        return {
+            "status": "error",
+            "message": error_message,
+            "snackbar": "Internal configuration error. Please check environment setup."
+        }
     
     messages = [
         {
@@ -162,24 +180,33 @@ def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
 
     try:
         response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
+            "https://api.groq.com/openai/v1/chat/compdletions",
             headers=headers,
             json=payload,
             timeout=15
         )
         response.raise_for_status()
         reply = response.json()["choices"][0]["message"]["content"]
+        if session_id:
+            append_session_log(session_id, user_input, reply)
+        return {
+            "status": "ok",
+            "message": reply
+        }
     except requests.exceptions.HTTPError as e:
         print("❌ HTTP Error:", e.response.status_code, e.response.text)
-        reply = "❌ Groq API call failed: HTTP error."
+        error_message = "❌ Groq API call failed: HTTP error."
     except Exception as e:
         print("❌ Groq call failed:", str(e))
-        reply = "❌ Groq API call failed."
+        error_message = "❌ Groq API call failed."
 
 
     if session_id:
-        append_session_log(session_id, user_input, reply)
-
-    return reply
+        append_session_log(session_id, user_input, error_message)
+    return {
+        "status": "error",
+        "message": error_message,
+        "snackbar": "LLM backend failed. Please try again later."
+    }
 
 
