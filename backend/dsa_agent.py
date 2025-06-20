@@ -180,7 +180,7 @@ def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
 
     try:
         response = requests.post(
-            "https://api.groq.com/openai/v1/chat/compdletions",
+            "https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             json=payload,
             timeout=15
