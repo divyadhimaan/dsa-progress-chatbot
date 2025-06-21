@@ -42,15 +42,18 @@ def persist_session_to_mongo(session_id):
     if not logs:
         return
     
-    print(f"Persisting {len(logs)} logs for session {session_id} to MongoDB")
+    print(f"Persisting {len(logs)} logs for session {session_id} to MongoDB...")
     
-    for log in logs:
+    try:
         logs_collection.insert_one({
             "session_id": session_id,
-            "timestamp": log["timestamp"],
-            "user_input": log["user_input"],
-            "response": log["response"]
+            "created_at": datetime.now(),
+            "logs": logs
         })
+        print("✅ Successfully persisted logs to MongoDB")
+    except Exception as e:
+        print(f"❌ Failed to persist logs for session {session_id}: {e}")
+
         
 def extract_day(text):
     match = re.search(r"day (\d+)", text.lower())

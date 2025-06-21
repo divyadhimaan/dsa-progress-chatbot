@@ -95,6 +95,14 @@ export default function Home() {
     const message = msg || input.trim();
     if (!message) return;
 
+    //first time chat
+    let currentSessionId = sessionId;
+    if (!currentSessionId) {
+      currentSessionId = crypto.randomUUID();
+      sessionStorage.setItem("session_id", currentSessionId);
+      setSessionId(currentSessionId); 
+    }
+
     console.log("Sending message:", message);
 
     setChat(prev => [
