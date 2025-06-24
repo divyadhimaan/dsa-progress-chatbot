@@ -3,21 +3,15 @@ import json
 import os
 
 from leetcode_map import LEETCODE_PROBLEMS
+from progress_store import load_completed_days, save_completed_days
 
 
 CSV_PATH = "dsa_sheet.csv"
-PROGRESS_FILE = "completed_days.json"
 
 
 # Load the CSV
 def load_schedule():
     return pd.read_csv(CSV_PATH)
-
-def load_completed_days():
-    if not os.path.exists(PROGRESS_FILE):
-        return set()
-    with open(PROGRESS_FILE, "r") as f:
-        return set(json.load(f))
 
 
 # Get today's problems by day number
@@ -39,6 +33,7 @@ def get_day_plan(day):
     return response
 
 def get_all_completed_topics():
+    print("getting all completed topics: ")
     df = load_schedule()
     completed_df = load_completed_days()
 
@@ -72,21 +67,18 @@ def get_all_completed_topics():
 def mark_day_completed(day):
     completed_df = load_completed_days()
     completed_df.add(str(day))
-    with open(PROGRESS_FILE, "w") as f:
-        json.dump(list(completed_df), f)
+    save_completed_days(completed_df)
         
 def unmark_day_completed(day):
     completed_df = load_completed_days()
     day_str = str(day)
     if day_str in completed_df:
         completed_df.remove(day_str)
-        with open(PROGRESS_FILE, "w") as f:
-            json.dump(list(completed_df), f)
+        save_completed_days(completed_df)
     
 def clear_progress():
-    if os.path.exists(PROGRESS_FILE):
-        os.remove(PROGRESS_FILE)
-    print("Progress has been cleared. Start again soon.")
+    save_completed_days(set())
+    print("✅ Progress has been cleared. Start again soon.")
     
 def get_next_day_plan():
     df = load_schedule()

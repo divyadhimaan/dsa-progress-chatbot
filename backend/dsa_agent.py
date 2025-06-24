@@ -9,8 +9,6 @@ import certifi
 
 
 from dsa_schedule import *
-
-
 load_dotenv()
 
 # Initialize MongoDB client for persistent memory
@@ -18,6 +16,17 @@ MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = mongo_client["dsa_memory"]
 logs_collection = db["logs"]
+
+use_mongo = True
+try:
+    MONGO_URI = os.environ.get("MONGO_URI")
+    mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
+    mongo_client.server_info()  # Forces connection test
+    db = mongo_client["dsa_memory"]
+    print("⚠️ MongoDB connection established.")
+except errors.ServerSelectionTimeoutError:
+    print("⚠️ MongoDB connection failed. Falling back to local logging.")
+    use_mongo = False
 
 session_memory = {}
 
@@ -37,6 +46,7 @@ def get_session_history(session_id):
     logs = get_session_logs(session_id)
     return "\n".join(f"{log['timestamp']} - {log['user_input']} → {log['response']}" for log in logs)
 
+            
 def persist_session_to_mongo(session_id):
     logs = get_session_logs(session_id)
     if not logs:
@@ -55,9 +65,9 @@ def persist_session_to_mongo(session_id):
         print(f"❌ Failed to persist logs for session {session_id}: {e}")
 
         
-def extract_day(text):
-    match = re.search(r"day (\d+)", text.lower())
-    return int(match.group(1)) if match else None
+def extract_days(text):
+    matches = re.findall(r"day\s*(\d+)|(?<!\d)(\d+)(?!\d)", text.lower())
+    return [int(num1 or num2) for num1, num2 in matches]
         
 def summarize_progress():
     summary, topics = get_all_completed_topics()
@@ -77,45 +87,68 @@ def interpret_input(user_input):
         "uncompleted" in lower or
         "incomplete" in lower
     ):
-        day = extract_day(lower)
-        if day:
-            unmark_day_completed(day)
-            return f"❌ Day {day} marked as not completed."
+        days = extract_days(lower)
+        if days:
+            for day in days:
+                unmark_day_completed(day)
+            return f"❌ Unmarked Day(s): {', '.join(map(str, days))}."
         else:
-            return "❓ Couldn't extract which day to unmark. Try 'Unmark Day 3'."
+            return "❓ Couldn't extract which day(s) to unmark. Try 'Unmark Day 3 and 4'."
 
     # 3. Mark day as completed
     if "day" in lower and "mark" in lower:
-        day = extract_day(lower)
-        if day:
-            mark_day_completed(day)
-            return f"✅ Day {day} marked as completed."
+        days = extract_days(lower)
+        if days:
+            for day in days:
+                mark_day_completed(day)
+            return f"✅ Marked Day(s) completed: {', '.join(map(str, days))}."
         else:
-            return "❓ Couldn't extract which day to mark. Try 'Mark Day 3 as done'."
+            return "❓ Couldn't extract which day(s) to mark. Try 'Mark Day 3 and 4 as done'."
 
     # 4. Ask for a specific day’s plan
     if "day" in lower and any(k in lower for k in ["problem", "plan", "focus"]):
-        day = extract_day(lower)
-        if day:
-            return get_day_plan(day)
+        days = extract_days(lower)
+        if days:
+            return get_day_plan(days[0])  # just show first matched
         else:
             return "❓ Couldn't find which day you want. Try 'Show Day 4’s plan'."
 
     # 5. General plan
     if "what" in lower and "plan" in lower:
         return get_next_day_plan()
+    
+    # 6. Show completed days (accurate version)
+    if any(q in lower for q in ["show", "what", "list", "which"]) and "completed" in lower and "day" in lower:
+        completed_days = sorted(load_completed_days(), key=lambda x: int(x))
+        if not completed_days:
+            return "📭 You haven't marked any days as completed yet. Let's get started!"
+        return (
+            f"✅ You've completed {len(completed_days)} day(s):\n"
+            + "\n".join(f"- Day {day}" for day in completed_days)
+        )
+        
+    # 7. How many days are left?
+    if any(q in lower for q in ["how many", "what", "show"]) and any(k in lower for k in ["left", "remaining", "pending"]):
+        df = load_schedule()
+        total_days = df["Day"].nunique()
+        completed = load_completed_days()
+        remaining = total_days - len(completed)
 
-    # 6. Completed topics summary
+        if remaining == 0:
+            return "🎉 Woohoo! You've completed all the days in your DSA schedule!"
+        return f"⏳ {remaining} day(s) left out of {total_days}. Keep pushing — you're doing great! 💪"
+
+    # 8. Completed topics summary
     if any(k in lower for k in ["completed", "topics", "done"]):
         summary, _ = get_all_completed_topics()
         return summary
 
-    # 7. Clear all progress
+    # 9. Clear all progress
     if "clear" in lower:
         clear_progress()
         return "✅ All progress cleared."
 
-    # 8. Fallback
+    # 10. Fallback
     return None
 
 def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
@@ -133,7 +166,7 @@ def dsa_agent(user_input, session_id=None, model="llama3-8b-8192"):
             }
     except Exception as e:
         print("❌ interpret_input failed:", e)
-        error_message = f"⚠️ Sorry! Something went wrong understanding your request.\n{str(e)}"
+        error_message = f"⚠️ Oops! My circuits tripped over a bug while trying to follow your command."
         if session_id:
             append_session_log(session_id, user_input, error_message)
         return {

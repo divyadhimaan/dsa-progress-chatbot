@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from dsa_agent import dsa_agent, get_session_logs, session_memory, persist_session_to_mongo
+from dsa_agent import dsa_agent, get_session_logs, persist_session_to_mongo, session_memory
 
 
 import json
