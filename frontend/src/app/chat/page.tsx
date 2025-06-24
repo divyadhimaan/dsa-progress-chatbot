@@ -204,7 +204,7 @@ export default function Home() {
             >
               <div
                 className={`p-3 rounded-2xl w-fit min-w-[250px] max-w-[75%] break-words whitespace-pre-wrap bg-blue-600 text-white rounded-br-none ${message.sender === "user"
-                  ? "bg-blue-600 text-white rounded-br-none"
+                  ? "bg-zinc-500 text-white rounded-br-none"
                   : "bg-zinc-800 text-white rounded-bl-none"
                   }`}
               >
@@ -243,7 +243,7 @@ export default function Home() {
           />
           <button
             onClick={() => sendMessage()}
-            className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg"
+            className="bg-zinc-500 hover:bg-blue-700 text-white p-3 rounded-lg"
           >
             <Send size={20} />
           </button>
