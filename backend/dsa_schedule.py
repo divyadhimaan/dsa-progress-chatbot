@@ -60,7 +60,7 @@ def get_all_completed_topics():
     summary = (
         f"You've completed {len(sorted_topics)} topics so far. Keep going! 🚀\n\n"
         "Here are your completed topics:\n\n"
-        + "\n".join(f"- {topic}" for topic in sorted_topics)
+        + ", ".join(f"{topic}" for topic in sorted_topics)
     )
     return summary, sorted_topics
 

@@ -124,7 +124,7 @@ def interpret_input(user_input):
             return "📭 You haven't marked any days as completed yet. Let's get started!"
         return (
             f"✅ You've completed {len(completed_days)} day(s):\n"
-            + "\n".join(f"- Day {day}" for day in completed_days)
+            + ", ".join(f"Day {day}" for day in completed_days)
         )
         
     # 7. How many days are left?
