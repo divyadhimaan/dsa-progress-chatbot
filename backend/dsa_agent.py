@@ -11,19 +11,14 @@ import certifi
 from dsa_schedule import *
 load_dotenv()
 
-# Initialize MongoDB client for persistent memory
-MONGO_URI = os.getenv("MONGO_URI")
-mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
-db = mongo_client["dsa_memory"]
-logs_collection = db["logs"]
-
 use_mongo = True
 try:
     MONGO_URI = os.environ.get("MONGO_URI")
     mongo_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
     mongo_client.server_info()  # Forces connection test
     db = mongo_client["dsa_memory"]
-    print("⚠️ MongoDB connection established.")
+    logs_collection = db["logs"]
+    print("✅ MongoDB connection established for logs.")
 except errors.ServerSelectionTimeoutError:
     print("⚠️ MongoDB connection failed. Falling back to local logging.")
     use_mongo = False
@@ -49,7 +44,8 @@ def get_session_history(session_id):
             
 def persist_session_to_mongo(session_id):
     logs = get_session_logs(session_id)
-    if not logs:
+    if not logs or not use_mongo or not logs_collection:
+        print("❌ Skipping Mongo persistence: logs missing or Mongo unavailable")
         return
     
     print(f"Persisting {len(logs)} logs for session {session_id} to MongoDB...")

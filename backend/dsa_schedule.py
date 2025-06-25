@@ -3,7 +3,7 @@ import json
 import os
 
 from leetcode_map import LEETCODE_PROBLEMS
-from progress_store import load_completed_days, save_completed_days
+from progress_store import load_completed_days, get_completed_day_list
 
 
 CSV_PATH = "dsa_sheet.csv"
@@ -67,17 +67,17 @@ def get_all_completed_topics():
 def mark_day_completed(day):
     completed_df = load_completed_days()
     completed_df.add(str(day))
-    save_completed_days(completed_df)
+    get_completed_day_list(completed_df)
         
 def unmark_day_completed(day):
     completed_df = load_completed_days()
     day_str = str(day)
     if day_str in completed_df:
         completed_df.remove(day_str)
-        save_completed_days(completed_df)
+        get_completed_day_list(completed_df)
     
 def clear_progress():
-    save_completed_days(set())
+    get_completed_day_list(set())
     print("✅ Progress has been cleared. Start again soon.")
     
 def get_next_day_plan():
