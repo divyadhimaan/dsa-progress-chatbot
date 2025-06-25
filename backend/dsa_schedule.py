@@ -1,9 +1,11 @@
 import pandas as pd
 import json
 import os
+from datetime import datetime
+
 
 from leetcode_map import LEETCODE_PROBLEMS
-from progress_store import load_completed_days, get_completed_day_list
+from progress_store import load_completed_days, get_completed_day_list, save_progress_data
 
 
 CSV_PATH = "dsa_sheet.csv"
@@ -64,20 +66,49 @@ def get_all_completed_topics():
     )
     return summary, sorted_topics
 
+# def mark_day_completed(day):
+#     completed = load_completed_days()  # returns dict {day: timestamp}
+#     completed[str(day)] = datetime.now().isoformat()
+#     save_progress_data(completed)  # save back to file or Mongo
+#     print(f"✅ Marked Day {day} as completed with timestamp.")
+    
 def mark_day_completed(day):
-    completed_df = load_completed_days()
-    completed_df.add(str(day))
-    get_completed_day_list(completed_df)
+    df = load_schedule()
+    row = df[df["Day"] == day]
+    
+    if row.empty:
+        print(f"⚠️ Day {day} not found in schedule.")
+        return
+    
+    topic = str(row.iloc[0]["Focus"]).strip()
+    completed = load_completed_days()
+
+    completed[str(day)] = {
+        "timestamp": datetime.now().isoformat(),
+        "topic": topic if topic else "Unknown"
+    }
+
+    save_progress_data(completed)
+    print(f"✅ Marked Day {day} as completed — Topic: {topic}")
         
+# def unmark_day_completed(day):
+#     completed = load_completed_days()
+#     day_str = str(day)
+#     if day_str in completed:
+#         del completed[day_str]
+#         save_progress_data(completed)
+#         print(f"❌ Unmarked Day {day} as completed.")
+
 def unmark_day_completed(day):
-    completed_df = load_completed_days()
+    completed = load_completed_days()
     day_str = str(day)
-    if day_str in completed_df:
-        completed_df.remove(day_str)
-        get_completed_day_list(completed_df)
+    if day_str in completed:
+        del completed[day_str]
+        save_progress_data(completed)
+        print(f"❌ Unmarked Day {day} as completed.")
     
 def clear_progress():
-    get_completed_day_list(set())
+    save_progress_data({})
     print("✅ Progress has been cleared. Start again soon.")
     
 def get_next_day_plan():
