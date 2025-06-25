@@ -44,7 +44,7 @@ def get_session_history(session_id):
             
 def persist_session_to_mongo(session_id):
     logs = get_session_logs(session_id)
-    if not logs or not use_mongo or not logs_collection:
+    if not logs or not use_mongo or logs_collection is None:
         print("❌ Skipping Mongo persistence: logs missing or Mongo unavailable")
         return
     
