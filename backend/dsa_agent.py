@@ -72,9 +72,21 @@ def interpret_input(user_input):
         completed_days = sorted(load_completed_days(), key=lambda x: int(x))
         if not completed_days:
             return "📭 You haven't marked any days as completed yet. Let's get started!"
+
+        df = load_schedule()
+        completed_df = df[df["Day"].isin(completed_days)]
+
+        table_lines = [
+            f"| Day | Topic | Questions |",
+            f"|-----|--------|-----------|"
+        ]
+        for _, row in completed_df.iterrows():
+            table_lines.append(f"| {row['Day']} | {row['Topic']} | {row['Questions']} |")
+
+        table_output = "\n".join(table_lines)
         return (
-            f"✅ You've completed {len(completed_days)} day(s):\n"
-            + ", ".join(f"Day {day}" for day in completed_days)
+            f"✅ You've completed {len(completed_days)} day(s):\n\n"
+            f"{table_output}"
         )
         
     # 7. How many days are left?
