@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from dsa_agent import dsa_agent, get_session_logs, persist_session_to_mongo, session_memory
+from dsa_agent import dsa_agent
+from logger import get_session_logs, persist_session_to_mongo, session_memory
 
 
 import json
@@ -71,7 +72,6 @@ def clear_memory():
     if session_id in session_memory:
         session_memory[session_id]["logs"] = []
     return jsonify({"status": "cleared"})
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=os.getenv("BACKEND_PORT")  , debug=True)

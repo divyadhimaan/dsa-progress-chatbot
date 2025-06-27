@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import { UserCircle, MessageSquarePlus } from 'lucide-react';
 import { HTMLAttributes } from "react";
 
+import {getOrCreateSessionId} from "@/utils/session";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
@@ -44,7 +45,7 @@ export default function Home() {
     setChat([]);
     setInput('');
 
-    const newSessionId = crypto.randomUUID();
+    const newSessionId = getOrCreateSessionId();
     sessionStorage.setItem("session_id", newSessionId);
     setSessionId(newSessionId);
 

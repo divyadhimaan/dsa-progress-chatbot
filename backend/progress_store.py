@@ -52,6 +52,14 @@ def load_completed_days():
     print("Loading completing days..")
     return get_progress_data()
 
+def sync_to_local():
+    """Sync latest progress from MongoDB to local JSON file."""
+    if not use_mongo:
+        return
+    progress = get_progress_data()
+    with open(PROGRESS_FILE, "w") as f:
+        json.dump(progress, f, indent=2)
+    print("✅ Synced MongoDB progress to local file.")
 
 def save_completed_days(days_set):
     print("Saving completed days: ", days_set)
@@ -62,6 +70,7 @@ def save_completed_days(days_set):
             {"$set": {"completed_days": list(days_set)}},
             upsert=True
         )
+        sync_to_local()
     else:
         with open(PROGRESS_FILE, "w") as f:
             json.dump(list(days_set), f)
