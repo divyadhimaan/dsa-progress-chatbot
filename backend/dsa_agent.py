@@ -69,11 +69,19 @@ def interpret_input(user_input):
     
     # 6. Show completed days (accurate version)
     if any(q in lower for q in ["show", "what", "list", "which"]) and "completed" in lower and "day" in lower:
-        completed_days = sorted(load_completed_days(), key=lambda x: int(x))
+        completed_days = sorted([int(day) for day in load_completed_days()])
+
         if not completed_days:
             return "📭 You haven't marked any days as completed yet. Let's get started!"
 
+        
+
         df = load_schedule()
+        print("Schedule columns:", df.columns.tolist())
+        
+        print("Completed days:", completed_days)
+        print("Schedule days in df:", df["Day"].tolist())
+
         completed_df = df[df["Day"].isin(completed_days)]
 
         table_lines = [
@@ -81,7 +89,21 @@ def interpret_input(user_input):
             f"|-----|--------|-----------|"
         ]
         for _, row in completed_df.iterrows():
-            table_lines.append(f"| {row['Day']} | {row['Topic']} | {row['Questions']} |")
+            day = row.get("Day", "")
+            topic = row.get("Focus", "Unknown")
+            p1 = row.get("Problem 1", "")
+            p2 = row.get("Problem 2", "")
+            p3 = row.get("Problem 3", "")
+            
+            questions = [p1, p2, p3]
+
+            # Optional: handle questions as list or string
+            if isinstance(questions, list):
+                questions_str = ", ".join(questions)
+            else:
+                questions_str = str(questions)
+
+            table_lines.append(f"| {day} | {topic} | {questions_str} |")
 
         table_output = "\n".join(table_lines)
         return (
