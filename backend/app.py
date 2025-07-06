@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from dsa_agent import dsa_agent
-from logger import get_session_logs, persist_session_to_mongo, session_memory
+from logger import get_session_logs, persist_session_to_mongo, session_memory, start_cron_persist
 
 
 import json
@@ -74,4 +74,5 @@ def clear_memory():
     return jsonify({"status": "cleared"})
 
 if __name__ == "__main__":
+    start_cron_persist()
     app.run(host="0.0.0.0", port=os.getenv("BACKEND_PORT")  , debug=True)
