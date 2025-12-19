@@ -197,7 +197,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center flex-1 text-center gap-6 py-8">
 
             <h1 className="text-4xl font-bold mb-2">Ready to ace your DSA interviews? 🚀</h1>
-            <p className="text-gray-400 mb-4">I'm your personal interview coach. Choose your level to get started!</p>
+            <p className="text-gray-400 mb-4">I&apos;m your personal interview coach. Choose your level to get started!</p>
 
 
             {/* Suggestions */}
