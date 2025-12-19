@@ -23,10 +23,6 @@ const suggestions = [
   "Suggest problems to practice today"
 ];
 
-const models = [
-  { label: "LLaMA 3.3 (70B) [Default]", value: "llama-3.3-70b-versatile" },
-  { label: "LLaMA 3.1 (8B)", value: "llama-3.1-8b-instant" },
-];
 
 const levels = [
   { label: "SDE-1 (Entry Level)", value: "SDE1", description: "Fundamentals & Easy-Medium problems" },
@@ -38,7 +34,6 @@ const levels = [
 export default function Home() {
   const [chat, setChat] = useState<{ sender: "user" | "bot"; text: string }[]>([]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState(models[0].value);
   const [selectedLevel, setSelectedLevel] = useState(levels[0].value);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
@@ -131,7 +126,6 @@ export default function Home() {
       const res = await axios.post(`${baseUrl}/api/message`, {
         message,
         session_id: sessionId,
-        model: selectedModel,
         level: selectedLevel
       });
 
@@ -188,15 +182,6 @@ export default function Home() {
               <option key={l.value} value={l.value}>{l.label}</option>
             ))}
           </select>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="bg-zinc-800 text-white p-2 rounded-md border border-zinc-700 text-sm"
-          >
-            {models.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
         </div>
         <div className="flex items-center gap-5">
           <button onClick={handleNewChat} title="New Chat">
@@ -214,33 +199,6 @@ export default function Home() {
             <h1 className="text-4xl font-bold mb-2">Ready to ace your DSA interviews? 🚀</h1>
             <p className="text-gray-400 mb-4">I'm your personal interview coach. Choose your level to get started!</p>
 
-            {/* Level Selection Cards */}
-            <div className="w-full mb-8">
-              <h2 className="text-xl font-semibold mb-4 text-left">Select Your Interview Level</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {levels.map((level) => (
-                  <button
-                    key={level.value}
-                    onClick={() => {
-                      setSelectedLevel(level.value);
-                      sessionStorage.setItem("sde_level", level.value);
-                    }}
-                    className={`p-6 rounded-xl border-2 transition-all text-left ${selectedLevel === level.value
-                      ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
-                      : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-lg font-bold">{level.label}</h3>
-                      {selectedLevel === level.value && (
-                        <span className="text-blue-500 text-xl">✓</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-400">{level.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Suggestions */}
             <div className="w-full">
