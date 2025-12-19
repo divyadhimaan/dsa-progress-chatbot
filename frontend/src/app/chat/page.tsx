@@ -12,20 +12,26 @@ import ReactMarkdown from 'react-markdown';
 import { UserCircle, MessageSquarePlus } from 'lucide-react';
 import { HTMLAttributes } from "react";
 
-import {getOrCreateSessionId} from "@/utils/session";
+import { getOrCreateSessionId } from "@/utils/session";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
 
 const suggestions = [
-  "What is the plan for today?",
-  "What should I revise next?",
-  "How much have I done?",
-  "Clear my progress."
+  "Explain how to solve Two Sum",
+  "What are the key patterns for SDE interviews?",
+  "Help me understand dynamic programming",
+  "Suggest problems to practice today"
 ];
 
 const models = [
-  { label: "LLaMA 3 (8B) [Default]", value: "llama3-8b-8192" },
-  { label: "LLaMA 3 (70B)", value: "llama3-70b-8192" },
+  { label: "LLaMA 3.3 (70B) [Default]", value: "llama-3.3-70b-versatile" },
+  { label: "LLaMA 3.1 (8B)", value: "llama-3.1-8b-instant" },
+];
+
+const levels = [
+  { label: "SDE-1 (Entry Level)", value: "SDE1", description: "Fundamentals & Easy-Medium problems" },
+  { label: "SDE-2 (Mid Level)", value: "SDE2", description: "Advanced DSA & Medium-Hard problems" },
+  { label: "SDE-3 (Senior Level)", value: "SDE3", description: "Expert algorithms & System Design" },
 ];
 
 
@@ -33,6 +39,7 @@ export default function Home() {
   const [chat, setChat] = useState<{ sender: "user" | "bot"; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState(models[0].value);
+  const [selectedLevel, setSelectedLevel] = useState(levels[0].value);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const { enqueueSnackbar } = useSnackbar();
@@ -68,13 +75,19 @@ export default function Home() {
       if (storedSession) {
         setSessionId(storedSession);
       }
+
+      // Load the selected level from landing page
+      const storedLevel = sessionStorage.getItem("sde_level");
+      if (storedLevel) {
+        setSelectedLevel(storedLevel);
+      }
     }
   }, []);
 
-  
+
   useEffect(() => {
     if (!sessionId) return;
-  
+
     const loadMemory = async () => {
       try {
         const res = await axios.get(`${baseUrl}/api/memory`, {
@@ -89,7 +102,7 @@ export default function Home() {
         console.error("❌ Failed to load memory:", err);
       }
     };
-  
+
     loadMemory();
   }, [sessionId]);
 
@@ -102,7 +115,7 @@ export default function Home() {
     if (!currentSessionId) {
       currentSessionId = crypto.randomUUID();
       sessionStorage.setItem("session_id", currentSessionId);
-      setSessionId(currentSessionId); 
+      setSessionId(currentSessionId);
     }
 
     console.log("Sending message:", message);
@@ -118,9 +131,10 @@ export default function Home() {
       const res = await axios.post(`${baseUrl}/api/message`, {
         message,
         session_id: sessionId,
-        model: selectedModel
+        model: selectedModel,
+        level: selectedLevel
       });
-      
+
 
       const data = res.data.reply;
 
@@ -160,15 +174,30 @@ export default function Home() {
           </Link>
           {/* <span className="text-white font-semibold text-lg">bot</span> */}
         </div>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          className="bg-zinc-800 text-white p-2 rounded-md border border-zinc-700 text-sm"
-        >
-          {models.map((m) => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedLevel}
+            onChange={(e) => {
+              setSelectedLevel(e.target.value);
+              sessionStorage.setItem("sde_level", e.target.value);
+            }}
+            className="bg-zinc-800 text-white p-2 rounded-md border border-zinc-700 text-sm"
+            title="Select your interview level"
+          >
+            {levels.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="bg-zinc-800 text-white p-2 rounded-md border border-zinc-700 text-sm"
+          >
+            {models.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-5">
           <button onClick={handleNewChat} title="New Chat">
             <MessageSquarePlus className="text-white w-8 h-8 hover:text-blue-400 transition" />
@@ -180,20 +209,53 @@ export default function Home() {
       <main className="max-w-3xl mx-auto flex-1 px-4 pt-15 overflow-y-auto">
 
         {chat.length === 0 && (
-          <div className="flex flex-col items-center justify-center flex-1 text-center gap-4">
+          <div className="flex flex-col items-center justify-center flex-1 text-center gap-6 py-8">
 
-            <h1 className="text-3xl font-bold mb-2">Hello there!</h1>
-            <p className="text-gray-400 mb-6">How can I help you today?</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-              {suggestions.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => sendMessage(s)}
-                  className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 p-4 text-left rounded-lg text-sm"
-                >
-                  {s}
-                </button>
-              ))}
+            <h1 className="text-4xl font-bold mb-2">Ready to ace your DSA interviews? 🚀</h1>
+            <p className="text-gray-400 mb-4">I'm your personal interview coach. Choose your level to get started!</p>
+
+            {/* Level Selection Cards */}
+            <div className="w-full mb-8">
+              <h2 className="text-xl font-semibold mb-4 text-left">Select Your Interview Level</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {levels.map((level) => (
+                  <button
+                    key={level.value}
+                    onClick={() => {
+                      setSelectedLevel(level.value);
+                      sessionStorage.setItem("sde_level", level.value);
+                    }}
+                    className={`p-6 rounded-xl border-2 transition-all text-left ${selectedLevel === level.value
+                      ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
+                      : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800'
+                      }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-bold">{level.label}</h3>
+                      {selectedLevel === level.value && (
+                        <span className="text-blue-500 text-xl">✓</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400">{level.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Suggestions */}
+            <div className="w-full">
+              <h2 className="text-xl font-semibold mb-4 text-left">Quick Start Questions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(s)}
+                    className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 p-4 text-left rounded-lg text-sm transition-all hover:border-zinc-600"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

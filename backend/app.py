@@ -1,11 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from dsa_agent import dsa_agent
+from simple_agent import simple_agent
 from logger import get_session_logs, persist_session_to_mongo, session_memory, start_cron_persist
-
-
-import json
+import traceback
 import os
 
 load_dotenv()
@@ -19,7 +17,7 @@ CORS(app, resources={r"/api/*": {"origins": [
 
 @app.route("/")
 def home():
-    return "DSA Chatbot Backend is Running."
+    return "DSA Interview Assistant Backend is Running."
 
 @app.route("/healthy", methods=["GET"])
 def healthy():
@@ -37,14 +35,20 @@ def chat():
         print("📥 Received:", data)
 
         message = data.get("message", "")
-        model = data.get("model", "llama3-8b-8192")
+        model = data.get("model", "llama-3.3-70b-versatile")
         session_id = data.get("session_id")
+        level = data.get("level", "SDE1")  # Accept SDE level (SDE1, SDE2, SDE3)
 
         if not message:
             return jsonify({"reply": "⚠️ Message is missing."}), 400
         
 
-        response = dsa_agent(user_input=message, model=model,session_id=session_id )
+        response = simple_agent(
+            user_input=message, 
+            model=model,
+            session_id=session_id,
+            level=level
+        )
         return jsonify({"reply": response})
 
     except Exception as e:
