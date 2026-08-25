@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from dotenv import load_dotenv
 from logger import append_session_log
@@ -140,7 +141,28 @@ def _build_user_message(user_input: str, rag_context: str) -> str:
 
 # ── Main agent ────────────────────────────────────────────────────────────────
 
-def simple_agent(user_input, session_id=None, model="llama-3.3-70b-versatile", level="SDE1"):
+def _extract_reply(message: dict) -> str:
+    """
+    Normalize the reply field across different Groq model families:
+      - Qwen3 / reasoning models: strip <think>…</think> from content
+      - openai/gpt-oss-*: content is empty; answer lives in 'reasoning'
+      - Standard chat models: use content directly
+    """
+    content   = message.get("content") or ""
+    reasoning = message.get("reasoning") or ""
+
+    # Strip <think>…</think> blocks (Qwen3 chain-of-thought)
+    if "<think>" in content:
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+
+    # openai/gpt-oss-* put the answer in reasoning when content is empty
+    if not content and reasoning:
+        content = reasoning.strip()
+
+    return content or "❌ No response received."
+
+
+def simple_agent(user_input, session_id=None, model="qwen/qwen3.6-27b", level="SDE1"):
     """
     DSA interview preparation chatbot with RAG-augmented context.
 
@@ -207,7 +229,7 @@ def simple_agent(user_input, session_id=None, model="llama-3.3-70b-versatile", l
             timeout=30,
         )
         response.raise_for_status()
-        reply = response.json()["choices"][0]["message"]["content"]
+        reply = _extract_reply(response.json()["choices"][0]["message"])
 
         if session_id:
             append_session_log(session_id, user_input, reply)

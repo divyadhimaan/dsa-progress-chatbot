@@ -38,7 +38,7 @@ def chat():
         print("📥 Received:", data)
 
         message    = data.get("message", "")
-        model      = data.get("model", "llama-3.3-70b-versatile")
+        model      = data.get("model", "qwen/qwen3.6-27b")
         session_id = data.get("session_id")
         level      = data.get("level", "SDE1")
 
