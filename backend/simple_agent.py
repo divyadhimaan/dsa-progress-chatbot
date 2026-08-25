@@ -2,10 +2,12 @@ import os
 import requests
 from dotenv import load_dotenv
 from logger import append_session_log
+from rag.retriever import retrieve
 
 load_dotenv()
 
-# Define personas for each SDE level
+# ── SDE Personas ──────────────────────────────────────────────────────────────
+
 SDE_PERSONAS = {
     "SDE1": """You are an expert DSA interview coach specializing in SDE-1 (Entry-Level) preparation.
 
@@ -109,101 +111,127 @@ SDE_PERSONAS = {
 - Expect and encourage debate on approaches"""
 }
 
+
 def get_persona_for_level(level):
-    """Get the appropriate persona based on SDE level."""
+    """Return the system prompt for the given SDE level."""
     level_upper = level.upper() if level else "SDE1"
     return SDE_PERSONAS.get(level_upper, SDE_PERSONAS["SDE1"])
 
+
+def _build_user_message(user_input: str, rag_context: str) -> str:
+    """
+    Augment the user's message with retrieved DSA context.
+    The context is injected as a clearly-labelled block so the LLM
+    can reference it without being forced to use it when irrelevant.
+    """
+    if not rag_context:
+        return user_input
+
+    return (
+        "The following DSA knowledge may be relevant to the question below. "
+        "Use it to ground your answer with concrete examples or code — "
+        "but rely on your own expertise when the retrieved content doesn't apply.\n\n"
+        "--- Retrieved Knowledge ---\n"
+        f"{rag_context}\n"
+        "--- End of Retrieved Knowledge ---\n\n"
+        f"Question: {user_input}"
+    )
+
+
+# ── Main agent ────────────────────────────────────────────────────────────────
+
 def simple_agent(user_input, session_id=None, model="llama-3.3-70b-versatile", level="SDE1"):
     """
-    A DSA interview preparation chatbot agent that adapts to SDE level.
-    
+    DSA interview preparation chatbot with RAG-augmented context.
+
+    Flow:
+      1. Retrieve top-3 relevant DSA knowledge chunks (FAISS + MiniLM)
+      2. Inject retrieved context into the user message
+      3. Call the Groq LLaMA API with the level-appropriate persona
+      4. Log the exchange and return the reply
+
+    Falls back to plain LLM if the RAG index hasn't been built yet.
+
     Args:
-        user_input: The user's message
-        session_id: Optional session ID for logging
-        model: The Groq model to use
-        level: SDE level - "SDE1", "SDE2", or "SDE3"
-    
+        user_input:  The user's question.
+        session_id:  Optional session ID for logging.
+        model:       Groq model ID.
+        level:       "SDE1" | "SDE2" | "SDE3"
+
     Returns:
-        dict with status, message, and optional snackbar
+        dict with keys: status ("ok" | "error"), message, [snackbar]
     """
-    
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     if not GROQ_API_KEY:
         error_message = "❌ Missing GROQ_API_KEY in environment variables."
         if session_id:
             append_session_log(session_id, user_input, error_message)
         return {
-            "status": "error",
-            "message": error_message,
-            "snackbar": "Internal configuration error. Please check environment setup."
+            "status":   "error",
+            "message":  error_message,
+            "snackbar": "Internal configuration error. Please check environment setup.",
         }
-    
-    # Get persona based on level
-    persona = get_persona_for_level(level)
-    
+
+    # ── 1. RAG retrieval ──────────────────────────────────────────────────────
+    rag_context = retrieve(user_input, k=3)
+    if rag_context:
+        print(f"🔍 RAG: retrieved {len(rag_context.split())} words of context")
+    else:
+        print("ℹ️  RAG: no context retrieved (index not built or below threshold)")
+
+    # ── 2. Build messages ─────────────────────────────────────────────────────
+    persona        = get_persona_for_level(level)
+    augmented_user = _build_user_message(user_input, rag_context)
+
     messages = [
-        {
-            "role": "system",
-            "content": persona
-        },
-        {
-            "role": "user",
-            "content": user_input
-        }
+        {"role": "system", "content": persona},
+        {"role": "user",   "content": augmented_user},
     ]
-    
+
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
+        "Content-Type":  "application/json",
     }
-    
     payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.7
+        "model":       model,
+        "messages":    messages,
+        "temperature": 0.7,
     }
-    
+
+    # ── 3. Call Groq API ──────────────────────────────────────────────────────
     try:
         response = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=30
+            timeout=30,
         )
         response.raise_for_status()
         reply = response.json()["choices"][0]["message"]["content"]
-        
+
         if session_id:
             append_session_log(session_id, user_input, reply)
-        
-        return {
-            "status": "ok",
-            "message": reply
-        }
-    
+
+        return {"status": "ok", "message": reply}
+
     except requests.exceptions.HTTPError as e:
         print("❌ HTTP Error:", e.response.status_code, e.response.text)
         error_message = f"❌ API call failed: {e.response.status_code}"
-        
         if session_id:
             append_session_log(session_id, user_input, error_message)
-        
         return {
-            "status": "error",
-            "message": error_message,
-            "snackbar": "LLM backend failed. Please try again later."
+            "status":   "error",
+            "message":  error_message,
+            "snackbar": "LLM backend failed. Please try again later.",
         }
-    
+
     except Exception as e:
         print("❌ API call failed:", str(e))
         error_message = "❌ Something went wrong. Please try again."
-        
         if session_id:
             append_session_log(session_id, user_input, error_message)
-        
         return {
-            "status": "error",
-            "message": error_message,
-            "snackbar": "An unexpected error occurred."
+            "status":   "error",
+            "message":  error_message,
+            "snackbar": "An unexpected error occurred.",
         }

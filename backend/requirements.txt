@@ -7,3 +7,7 @@ pymongo
 dnspython
 certifi
 gunicorn
+# RAG dependencies
+faiss-cpu
+sentence-transformers
+numpy

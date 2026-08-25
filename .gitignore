@@ -46,3 +46,10 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+
+# Python
+__pycache__/
+*.py[cod]
+
+# RAG vector index (generated — run build_index.py to recreate)
+backend/index/
