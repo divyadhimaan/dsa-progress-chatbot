@@ -9,6 +9,15 @@ load_dotenv()
 
 # ── SDE Personas ──────────────────────────────────────────────────────────────
 
+_CONCISE = """
+**Response Rules:**
+- Be direct — answer the question immediately, no preamble or restating it
+- Keep replies under 300 words unless a full code example is genuinely needed
+- Prefer bullet points and short code snippets over long paragraphs
+- Skip filler phrases ("Great question!", "Of course!", "Certainly!")
+- One concept per response — if the topic is broad, cover the most important part and ask which to go deeper on
+"""
+
 SDE_PERSONAS = {
     "SDE1": """You are an expert DSA interview coach specializing in SDE-1 (Entry-Level) preparation.
 
@@ -116,7 +125,8 @@ SDE_PERSONAS = {
 def get_persona_for_level(level):
     """Return the system prompt for the given SDE level."""
     level_upper = level.upper() if level else "SDE1"
-    return SDE_PERSONAS.get(level_upper, SDE_PERSONAS["SDE1"])
+    persona = SDE_PERSONAS.get(level_upper, SDE_PERSONAS["SDE1"])
+    return persona + _CONCISE
 
 
 def _build_user_message(user_input: str, rag_context: str) -> str:
@@ -225,6 +235,9 @@ def simple_agent(user_input, session_id=None, model="qwen/qwen3.6-27b", level="S
         "model":       model,
         "messages":    messages,
         "temperature": 0.7,
+        # Raise the ceiling — default (2048) gets eaten by <think> blocks,
+        # leaving the actual answer truncated mid-sentence.
+        "max_tokens":  16384,
     }
 
     # ── 3. Call Groq API ──────────────────────────────────────────────────────
@@ -233,7 +246,7 @@ def simple_agent(user_input, session_id=None, model="qwen/qwen3.6-27b", level="S
             "https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             json=payload,
-            timeout=30,
+            timeout=90,
         )
         response.raise_for_status()
         reply = _extract_reply(response.json()["choices"][0]["message"])
