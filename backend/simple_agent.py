@@ -151,9 +151,16 @@ def _extract_reply(message: dict) -> str:
     content   = message.get("content") or ""
     reasoning = message.get("reasoning") or ""
 
-    # Strip <think>…</think> blocks (Qwen3 chain-of-thought)
-    if "<think>" in content:
-        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    # Qwen3 emits a single leading <think>…</think> block before the answer.
+    # Only strip that opening block — leave any <think> the model uses
+    # inline inside the actual answer text untouched.
+    stripped = content.lstrip()
+    if stripped.startswith("<think>"):
+        if "</think>" in stripped:
+            content = stripped[stripped.index("</think>") + len("</think>"):].strip()
+        else:
+            # Block didn't close (truncated response) — nothing usable
+            content = ""
 
     # openai/gpt-oss-* put the answer in reasoning when content is empty
     if not content and reasoning:

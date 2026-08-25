@@ -9,12 +9,29 @@ import axios from 'axios';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { UserCircle, MessageSquarePlus } from 'lucide-react';
-import { HTMLAttributes } from "react";
 
 import { getOrCreateSessionId } from "@/utils/session";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
+
+/**
+ * Qwen3 emits one leading <think>…</think> block before the answer.
+ * Strip only that opening block — leave any <think> the model uses
+ * inline inside the actual answer text untouched.
+ */
+const stripThinkTags = (text: string): string => {
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith('<think>')) {
+    const closeIdx = trimmed.indexOf('</think>');
+    if (closeIdx !== -1) {
+      return trimmed.slice(closeIdx + '</think>'.length).trim();
+    }
+    return ''; // truncated / unclosed block
+  }
+  return text;
+};
 
 const suggestions = [
   "Explain how to solve Two Sum",
@@ -225,24 +242,67 @@ export default function Home() {
               className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`p-3 rounded-2xl w-fit min-w-[250px] max-w-[75%] break-words whitespace-pre-wrap bg-blue-600 text-white rounded-br-none ${message.sender === "user"
-                  ? "bg-zinc-500 text-white rounded-br-none"
-                  : "bg-zinc-800 text-white rounded-bl-none"
-                  }`}
+                className={`p-3 rounded-2xl w-fit min-w-[250px] break-words ${
+                  message.sender === "user"
+                    ? "max-w-[75%] bg-zinc-500 text-white rounded-br-none"
+                    : "max-w-[90%] bg-zinc-800 text-white rounded-bl-none"
+                }`}
               >
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
-                    a: (props: HTMLAttributes<HTMLAnchorElement>) => (
-                      <a
-                        {...props}
-                        className="text-blue-400 underline hover:text-blue-300"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
+                    // paragraphs
+                    p: ({ children }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap leading-relaxed">{children}</p>,
+                    // headings
+                    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-semibold mt-3 mb-1.5">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>,
+                    // inline code
+                    code: ({ className, children, ...props }) => {
+                      const isBlock = className?.startsWith('language-');
+                      return isBlock ? (
+                        <code className={`${className} block`} {...props}>{children}</code>
+                      ) : (
+                        <code className="bg-zinc-700 text-emerald-300 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>
+                      );
+                    },
+                    // fenced code blocks
+                    pre: ({ children }) => (
+                      <pre className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 my-2 overflow-x-auto text-sm font-mono text-zinc-100 leading-relaxed">
+                        {children}
+                      </pre>
                     ),
+                    // tables
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto my-3">
+                        <table className="min-w-full border-collapse text-sm">{children}</table>
+                      </div>
+                    ),
+                    thead: ({ children }) => <thead className="bg-zinc-700">{children}</thead>,
+                    tbody: ({ children }) => <tbody className="divide-y divide-zinc-700">{children}</tbody>,
+                    tr: ({ children }) => <tr className="hover:bg-zinc-700/40 transition-colors">{children}</tr>,
+                    th: ({ children }) => <th className="px-3 py-2 text-left font-semibold text-zinc-200 whitespace-nowrap">{children}</th>,
+                    td: ({ children }) => <td className="px-3 py-2 text-zinc-300 align-top">{children}</td>,
+                    // lists
+                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2 pl-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2 pl-2">{children}</ol>,
+                    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                    // blockquote
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-blue-500 pl-3 my-2 text-zinc-400 italic">{children}</blockquote>
+                    ),
+                    // links
+                    a: ({ href, children }) => (
+                      <a href={href} className="text-blue-400 underline hover:text-blue-300" target="_blank" rel="noopener noreferrer">{children}</a>
+                    ),
+                    // horizontal rule
+                    hr: () => <hr className="border-zinc-600 my-3" />,
+                    // strong / em
+                    strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-zinc-300">{children}</em>,
                   }}
                 >
-                  {message.text}
+                  {message.sender === 'bot' ? stripThinkTags(message.text) : message.text}
                 </ReactMarkdown>
               </div>
             </div>

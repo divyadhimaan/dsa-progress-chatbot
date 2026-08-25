@@ -51,5 +51,8 @@ __pycache__/
 __pycache__/
 *.py[cod]
 
-# RAG vector index (generated — run build_index.py to recreate)
-backend/index/
+# RAG vector index files are committed so deployment works without a build step.
+# Re-run backend/rag/build_index.py and commit the result after adding new data files.
+
+backend/rag/__pycache__/
+backend/__pycache__/

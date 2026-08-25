@@ -8,7 +8,8 @@
 [![Next.js](https://img.shields.io/badge/Next.js-19-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
-[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3-F55036?style=flat-square)](https://groq.com)
+[![Groq](https://img.shields.io/badge/Groq-Qwen3_27B-F55036?style=flat-square)](https://groq.com)
+[![FAISS](https://img.shields.io/badge/FAISS-RAG-blue?style=flat-square)](https://github.com/facebookresearch/faiss)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 [**Live Demo**](https://my-dbot.vercel.app) · [Report Bug](https://github.com/divyadhimaan/dsa-progress-chatbot/issues) · [Request Feature](https://github.com/divyadhimaan/dsa-progress-chatbot/issues)
@@ -19,9 +20,12 @@
 
 ## Overview
 
-dBot is a conversational AI coach for software engineering interview prep. Unlike generic chatbots, it selects a **tailored persona** based on your target role — SDE-1, SDE-2, or SDE-3 — so every response matches the depth, vocabulary, and expectations of the interview level you're preparing for.
+dBot is a conversational AI coach for software engineering interview prep. Unlike generic chatbots, it combines two techniques to give grounded, accurate answers:
 
-Ask it to explain a concept, walk through a LeetCode problem, or discuss system design trade-offs. Conversations are persisted per session in MongoDB, so you can pick up where you left off.
+- **Persona-based prompting** — selects an SDE-1, SDE-2, or SDE-3 coaching style so every response matches the depth and vocabulary of your target role
+- **Retrieval-Augmented Generation (RAG)** — before every LLM call, the backend retrieves the most relevant DSA knowledge chunks (patterns, algorithms, complexity tables) from a local FAISS vector store and injects them as context, keeping answers precise and code-accurate
+
+Conversations are persisted per session in MongoDB, so you can pick up where you left off.
 
 ---
 
@@ -36,9 +40,9 @@ Ask it to explain a concept, walk through a LeetCode problem, or discuss system 
 | Feature | Description |
 |---|---|
 | 🎯 **Three SDE personas** | Entry, Mid, and Senior coaching styles — different depth, tone, and topic focus |
-| ⚡ **Dual model support** | Switch between LLaMA 3.3 70B (powerful) and LLaMA 3.1 8B (fast) mid-session |
+| 🔍 **RAG pipeline** | FAISS vector store retrieves top-3 relevant DSA chunks per query; gracefully skips if index not built |
 | 💬 **Session memory** | Full conversation history persisted to MongoDB; resume anytime |
-| 📝 **Markdown responses** | Code blocks, tables, and formatted explanations rendered inline |
+| 📝 **Rich markdown** | Tables, fenced code blocks, lists, and headings rendered inline via `remark-gfm` |
 | 🔄 **Background persistence** | A cron thread flushes in-memory logs to MongoDB every 5 minutes |
 | 🌐 **CORS-ready** | Configured for local dev and Vercel production out of the box |
 
@@ -53,22 +57,31 @@ flowchart TD
     end
 
     subgraph Backend["Flask Backend (Python)"]
-        API["app.py\n/api/message\n/api/memory\n/api/clear"]
-        AGENT["simple_agent.py\nSDE1 / SDE2 / SDE3 Personas"]
+        API["app.py\n/api/message\n/api/memory\n/api/clear\n/api/rag/status"]
+        AGENT["simple_agent.py\nSDE1 / SDE2 / SDE3 Personas\n+ _extract_reply()"]
+        RAG["rag/retriever.py\nFAISS index · all-MiniLM-L6-v2\ntop-3 cosine-similar chunks"]
         LOGGER["logger.py\nIn-memory session store\n+ background persist thread"]
     end
 
+    subgraph Knowledge["Knowledge Base (local)"]
+        INDEX["backend/index/\nfaiss.index + chunks.pkl"]
+        DATA["rag/data/\npatterns.md · algorithms.md"]
+    end
+
     subgraph External["External Services"]
-        GROQ["Groq API\nLLaMA 3.3 70B / 3.1 8B"]
+        GROQ["Groq API\nQwen3 27B"]
         MONGO["MongoDB Atlas\n(dsa_memory.logs)"]
     end
 
-    UI -- "POST /api/message\n{ message, level, model, session_id }" --> API
+    UI -- "POST /api/message\n{ message, level, session_id }" --> API
     UI -- "GET /api/memory?session_id" --> API
     UI -- "POST /api/clear?session_id" --> API
 
     API --> AGENT
-    AGENT -- "system prompt (persona)\n+ user message" --> GROQ
+    AGENT -- "embed query → top-3 chunks" --> RAG
+    RAG -- "reads" --> INDEX
+    DATA -- "build_index.py\n(one-time)" --> INDEX
+    AGENT -- "persona + retrieved context\n+ user message" --> GROQ
     GROQ -- "LLM reply" --> AGENT
     AGENT -- "append_session_log()" --> LOGGER
     LOGGER -- "persist every 5 min\nor on /api/clear" --> MONGO
@@ -79,10 +92,12 @@ flowchart TD
 
 **Request lifecycle:**
 1. User picks an SDE level and types a message in the chat UI
-2. Frontend sends `POST /api/message` with `{ message, level, model, session_id }`
-3. Backend selects the matching persona from `simple_agent.py` and calls the Groq API
-4. The reply is appended to in-memory session logs and returned to the UI
-5. A background thread persists all sessions to MongoDB every 5 minutes; a manual "New Chat" triggers an immediate flush
+2. Frontend sends `POST /api/message` with `{ message, level, session_id }`
+3. Backend embeds the query with `all-MiniLM-L6-v2` and retrieves the top-3 relevant DSA knowledge chunks from FAISS
+4. Retrieved context is injected into the user message; the level-appropriate persona is used as the system prompt
+5. Groq runs inference with Qwen3 27B; the `<think>` reasoning block is stripped before the reply is returned
+6. The reply is appended to in-memory session logs and returned to the UI
+7. A background thread persists all sessions to MongoDB every 5 minutes
 
 ---
 
@@ -94,16 +109,17 @@ flowchart TD
 | ⚛️ | Next.js 19 + React 19 | Framework and rendering |
 | 🟦 | TypeScript 5 | Type safety |
 | 🎨 | Tailwind CSS v4 + MUI | Styling and UI components |
-| 📝 | react-markdown | Render LLM markdown in chat |
+| 📝 | react-markdown + remark-gfm | Render LLM markdown — tables, code blocks, lists |
 | 🔌 | axios | HTTP client for API calls |
 | 🔔 | notistack | Toast notifications |
 
 ### Backend
 | | Library | Purpose |
 |---|---|---|
-| 🐍 | Flask | Web framework and routing |
-| 🔐 | flask-cors | Cross-origin request handling |
-| 🤖 | Groq API (HTTP) | LLaMA inference |
+| 🐍 | Flask + flask-cors | Web framework and routing |
+| 🤖 | Groq API (HTTP) | Qwen3 27B inference |
+| 🔍 | FAISS (`faiss-cpu`) | Vector similarity search |
+| 🧠 | sentence-transformers | `all-MiniLM-L6-v2` query embedding |
 | 🍃 | pymongo + certifi | MongoDB client with TLS |
 | ⚙️ | python-dotenv | Environment configuration |
 
@@ -148,7 +164,19 @@ pip install -r backend/requirements.txt
 cd frontend && npm install
 ```
 
-### 4 — Run
+### 4 — Build the RAG index
+
+Run once after cloning (and again whenever you add new files to `backend/rag/data/`):
+
+```bash
+python3 backend/rag/build_index.py
+```
+
+This reads every `.md` / `.txt` file in `backend/rag/data/`, embeds them with `all-MiniLM-L6-v2`, and writes the FAISS index to `backend/index/`. The backend loads it lazily on the first query — no restart needed.
+
+> The `backend/index/` directory is gitignored. If you skip this step, the backend falls back to plain LLM responses without retrieval.
+
+### 5 — Run
 
 Open two terminals:
 
@@ -196,6 +224,25 @@ Each level selects a distinct system prompt that shapes the depth, vocabulary, a
 
 ---
 
+## RAG Knowledge Base
+
+The vector store is seeded from Markdown files in `backend/rag/data/`:
+
+| File | Contents |
+|---|---|
+| `patterns.md` | 12 patterns — sliding window, two pointers, fast/slow pointers, BFS/DFS, backtracking, 0/1 knapsack, LCS, LIS, heap, monotonic stack, union-find, trie, topological sort |
+| `algorithms.md` | Sorting algorithms + complexity table, Dijkstra / Bellman-Ford / Floyd-Warshall / Kruskal / Prim, tree operations, KMP / Rabin-Karp, bit manipulation tricks, back-of-envelope estimates, system design fundamentals |
+
+**Adding more knowledge:** drop any `.md` or `.txt` file into `backend/rag/data/` and re-run:
+
+```bash
+python3 backend/rag/build_index.py
+```
+
+The index hot-reloads on the next backend restart.
+
+---
+
 ## API Reference
 
 ### `POST /api/message`
@@ -206,7 +253,6 @@ Send a message and receive an AI reply.
 {
   "message": "Explain binary search",
   "level": "SDE1",
-  "model": "llama-3.3-70b-versatile",
   "session_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -235,6 +281,22 @@ Flush the session to MongoDB and reset in-memory history (triggered by "New Chat
 
 ---
 
+### `GET /api/rag/status`
+Check whether the RAG index is built and loaded.
+
+**Response:**
+```json
+{
+  "index_exists": true,
+  "loaded": true,
+  "num_vectors": 18,
+  "num_chunks": 18,
+  "index_dir": "/path/to/backend/index"
+}
+```
+
+---
+
 ### `GET /healthy`
 Health check — returns `200 OK`.
 
@@ -245,10 +307,19 @@ Health check — returns `200 OK`.
 ```
 dsa-progress-chatbot/
 ├── backend/
-│   ├── app.py              # Flask app — routes and CORS config
-│   ├── simple_agent.py     # Groq API client + SDE_PERSONAS definitions
-│   ├── logger.py           # In-memory session store + MongoDB persistence
-│   └── requirements.txt
+│   ├── app.py                  # Flask app — routes and CORS config
+│   ├── simple_agent.py         # RAG retrieval + Groq call + SDE personas
+│   ├── logger.py               # In-memory session store + MongoDB persistence
+│   ├── requirements.txt
+│   ├── rag/
+│   │   ├── retriever.py        # FAISS loader + cosine-similarity search
+│   │   ├── build_index.py      # One-time CLI to embed data/ → index/
+│   │   └── data/
+│   │       ├── patterns.md     # DSA pattern library
+│   │       └── algorithms.md   # Algorithm templates & complexity reference
+│   └── index/                  # ← gitignored, generated by build_index.py
+│       ├── faiss.index
+│       └── chunks.pkl
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
@@ -259,8 +330,10 @@ dsa-progress-chatbot/
 │   │   └── components/
 │   │       └── SnackbarProviderWrapper.tsx
 │   └── package.json
-├── .env                    # Not committed — see Getting Started
-└── README.md
+├── images/
+│   └── screenshot.png
+├── .env                        # Not committed — see Getting Started
+└── readme.md
 ```
 
 ---
@@ -276,9 +349,15 @@ SDE_PERSONAS = {
 }
 ```
 
-**Add a new level** — add an entry to `SDE_PERSONAS`, then add the level to the dropdown array in `frontend/src/app/chat/page.tsx`.
+**Expand the knowledge base** — add `.md` or `.txt` files to `backend/rag/data/` and rebuild:
 
-**Swap the model** — any model from [Groq's supported list](https://console.groq.com/docs/models) works; update the models array in the frontend or pass it directly in the API request.
+```bash
+python3 backend/rag/build_index.py
+```
+
+**Add a new SDE level** — add an entry to `SDE_PERSONAS`, then add the level to the dropdown array in `frontend/src/app/chat/page.tsx`.
+
+**Swap the model** — change the default in `backend/simple_agent.py` and `backend/app.py`. Any chat-capable model on [Groq's supported list](https://console.groq.com/docs/models) works. If the model emits `<think>` blocks, `_extract_reply()` in `simple_agent.py` strips them automatically.
 
 ---
 
@@ -287,8 +366,13 @@ SDE_PERSONAS = {
 ### Backend — Render / Railway / Fly.io
 
 1. Set env vars: `GROQ_API_KEY`, `MONGO_URI`, `BACKEND_PORT`
-2. Deploy the `backend/` directory
+2. Add a **build step** to generate the RAG index before the server starts:
+   ```bash
+   pip install -r requirements.txt && python rag/build_index.py
+   ```
 3. Start command: `gunicorn app:app`
+
+> The `backend/index/` directory is gitignored. If your host doesn't support persistent disk, the backend will fall back to plain LLM responses without retrieval — still functional, just without the RAG context.
 
 ### Frontend — Vercel
 
@@ -302,7 +386,7 @@ Don't forget to add your Vercel domain to the `CORS` allowlist in [`backend/app.
 
 ## Contributing
 
-Issues and PRs are welcome! If you add a new persona level, an interesting prompt tweak, or a UI improvement — open a pull request.
+Issues and PRs are welcome! If you add a new persona level, expand the knowledge base, or improve the UI — open a pull request.
 
 ---
 
