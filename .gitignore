@@ -41,3 +41,8 @@ ui-server/next-env.d.ts
 node-server/node_modules
 
 node_modules
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
