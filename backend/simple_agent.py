@@ -129,14 +129,24 @@ def get_persona_for_level(level):
     return persona + _CONCISE
 
 
+_RAG_WORD_CAP = 250  # hard ceiling on retrieved context to stay within TPM budget
+
+
 def _build_user_message(user_input: str, rag_context: str) -> str:
     """
     Augment the user's message with retrieved DSA context.
     The context is injected as a clearly-labelled block so the LLM
     can reference it without being forced to use it when irrelevant.
+    Context is truncated to _RAG_WORD_CAP words to keep the request
+    well inside Groq's TPM limit.
     """
     if not rag_context:
         return user_input
+
+    # Truncate to word cap so a large retrieval doesn't blow the TPM budget
+    words = rag_context.split()
+    if len(words) > _RAG_WORD_CAP:
+        rag_context = " ".join(words[:_RAG_WORD_CAP]) + " …"
 
     return (
         "The following DSA knowledge may be relevant to the question below. "
@@ -212,7 +222,8 @@ def simple_agent(user_input, session_id=None, model="qwen/qwen3.6-27b", level="S
         }
 
     # ── 1. RAG retrieval ──────────────────────────────────────────────────────
-    rag_context = retrieve(user_input, k=3)
+    # k=2 keeps the prompt lean; _build_user_message caps words further.
+    rag_context = retrieve(user_input, k=2)
     if rag_context:
         print(f"🔍 RAG: retrieved {len(rag_context.split())} words of context")
     else:
@@ -235,9 +246,11 @@ def simple_agent(user_input, session_id=None, model="qwen/qwen3.6-27b", level="S
         "model":       model,
         "messages":    messages,
         "temperature": 0.7,
-        # Raise the ceiling — default (2048) gets eaten by <think> blocks,
-        # leaving the actual answer truncated mid-sentence.
-        "max_tokens":  16384,
+        # 3 000 output tokens is ample for any DSA explanation.
+        # IMPORTANT: Groq's TPM limit counts input + max_tokens together.
+        # At 16 384 the total request (~17 k) blew the 8 000 TPM cap;
+        # 3 000 keeps the combined window safely under the limit.
+        "max_tokens":  3000,
     }
 
     # ── 3. Call Groq API ──────────────────────────────────────────────────────

@@ -29,9 +29,13 @@ Conversations are persisted per session in MongoDB, so you can pick up where you
 
 ---
 
-## Screenshot
+## Screenshots
 
-![dBot chat interface showing the SDE-1 welcome screen with quick-start questions](images/screenshot.png)
+### Landing page — level selector
+![dBot landing page with hero headline and SDE level selection cards](images/screenshot-landing.png)
+
+### Chat interface
+![dBot chat page with segmented level picker, quick-start cards, and input bar](images/screenshot-chat.png)
 
 ---
 
@@ -331,7 +335,8 @@ dsa-progress-chatbot/
 │   │       └── SnackbarProviderWrapper.tsx
 │   └── package.json
 ├── images/
-│   └── screenshot.png
+│   ├── screenshot-landing.png
+│   └── screenshot-chat.png
 ├── .env                        # Not committed — see Getting Started
 └── readme.md
 ```
