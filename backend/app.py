@@ -85,6 +85,10 @@ def rag_status_endpoint():
     return jsonify(rag_status())
 
 
+# Start the background persist thread regardless of how the server is launched
+# (gunicorn never enters the __main__ block, so this must live at module level).
+start_cron_persist()
+
 if __name__ == "__main__":
-    start_cron_persist()
-    app.run(host="0.0.0.0", port=os.getenv("BACKEND_PORT"), debug=True)
+    port = int(os.getenv("BACKEND_PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
